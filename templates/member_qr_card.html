@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block title %}{{ membership.organization.name }} membership card{% endblock %}
+{% block content %}
+  <div class="dashboard-head"><div><span class="eyebrow">Digital membership pass</span><h1 class="page-heading">{{ membership.organization.name }}</h1><p class="page-intro">Show this pass to the club team to record attendance. The QR code is private, short-lived, and can only be used once.</p></div><div class="dashboard-actions"><a class="button button-quiet" href="{{ url_for('member_directory') }}">Back to my clubs</a></div></div>
+  <section class="panel member-pass-card"><div class="member-pass-copy"><span class="eyebrow">Socio member</span><h2>{{ membership.full_name }}</h2><p>{{ membership.plan.name }} · {{ g.user.email }}</p><p>Member of {{ membership.organization.name }}</p><span class="status-badge status-active">{{ membership_status(membership) }}</span><p class="field-hint">Pass expires {{ expires_at.strftime('%H:%M UTC') }}. Reload this page to refresh it.</p></div><img class="member-pass-qr" src="{{ qr_image }}" alt="One-time membership check-in QR code for {{ membership.organization.name }}"></section>
+{% endblock %}

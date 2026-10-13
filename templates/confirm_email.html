@@ -1,0 +1,5 @@
+{% extends 'base.html' %}
+{% block title %}Confirm email{% endblock %}
+{% block content %}
+  <section class="panel email-confirm-card"><span class="eyebrow">Socio account security</span>{% if valid %}<h1 class="page-heading">Confirm your email address</h1><p class="page-intro">This lets us know the address belongs to you. The link can only be used once.</p><form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button" type="submit">Confirm email and continue →</button></form>{% else %}<h1 class="page-heading">This link cannot be used</h1><p class="page-intro">It may have expired or already been used. Request a fresh confirmation link to continue.</p><a class="button" href="{{ url_for('resend_email_confirmation') }}">Request a new link</a>{% endif %}</section>
+{% endblock %}

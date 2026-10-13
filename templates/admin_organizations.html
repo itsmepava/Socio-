@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Platform admin{% endblock %}
+{% block content %}
+  {% set pending_count = organizations|selectattr('status', 'equalto', 'Pending')|list|length %}
+  <div class="dashboard-head">
+    <div><span class="eyebrow">Private platform workspace</span><h1 class="page-heading">Platform admin</h1><p class="page-intro">Review organization registrations and keep Socio’s member community running.</p></div>
+  </div>
+  <section class="stats-grid" aria-label="Platform summary">
+    {% if has_admin_permission('organizations') %}<article class="stat-card"><div class="stat-label">Organizations <span class="stat-glyph" aria-hidden="true">◫</span></div><strong class="stat-value">{{ organizations|length }}</strong><span class="stat-note">{{ pending_count }} awaiting review</span></article>{% endif %}
+    {% if has_admin_permission('reports') %}<article class="stat-card"><div class="stat-label">Member records <span class="stat-glyph" aria-hidden="true">♙</span></div><strong class="stat-value">{{ member_total }}</strong><span class="stat-note">Across all organizations</span></article>{% endif %}
+  </section>
+  {% if has_admin_permission('organizations') %}
+  <section class="panel home-section" aria-labelledby="organization-list-title">
+    <div class="panel-head"><div><h2 class="section-heading" id="organization-list-title">Organizations</h2><p class="section-copy">Review new organizations before their administrators can manage members and share updates.</p></div></div>
+    {% if organizations %}<div class="table-wrap"><table><thead><tr><th>Organization</th><th>Contact email</th><th>Status</th><th>Members</th><th>Registered</th><th><span class="visually-hidden">Action</span></th></tr></thead><tbody>
+      {% for org in organizations %}<tr><td><span class="table-primary">{{ org.name }}</span></td><td>{{ org.email }}</td><td><span class="status-badge status-{{ org.status|lower }}">{{ org.status }}</span></td><td>{{ member_counts[org.id] }}</td><td>{{ org.created_at.strftime('%b %d, %Y') }}</td><td><div class="table-action">
+        {% if org.status == 'Pending' %}{% set action = 'approve' %}{% set button_class = 'button' %}{% elif org.status == 'Approved' %}{% set action = 'suspend' %}{% set button_class = 'button button-quiet' %}{% else %}{% set action = 'reinstate' %}{% set button_class = 'button button-quiet' %}{% endif %}
+        <form class="inline-form" method="post" action="{{ url_for('admin_change_organization', organization_id=org.id, action=action) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="{{ button_class }} button-small" type="submit">{{ action|capitalize }}</button></form>
+      </div></td></tr>{% endfor %}
+    </tbody></table></div>{% else %}<div class="empty-state"><span class="empty-icon" aria-hidden="true">◫</span><strong>No organizations yet</strong><p>Organization registrations will appear here for review.</p></div>{% endif %}
+  </section>{% endif %}
+  {% if has_admin_permission('organizations') %}<section class="panel home-section" aria-labelledby="activity-title"><div class="panel-head"><div><h2 class="section-heading" id="activity-title">Platform activity</h2><p class="section-copy">Recent organization and member administration events.</p></div></div>
+    {% if activity %}<ul class="activity-list">{% for item in activity %}<li><span class="activity-mark" aria-hidden="true"></span><span><strong>{{ item.action|replace('_', ' ')|capitalize }}</strong><small>{{ item.details or (item.object_type|capitalize ~ ' #' ~ item.object_id) }}</small></span><time>{{ item.created_at.strftime('%b %d, %H:%M') }}</time></li>{% endfor %}</ul>{% else %}<div class="empty-state"><strong>No activity yet</strong><p>Organization approvals and member actions will appear here.</p></div>{% endif %}
+  </section>{% endif %}
+{% endblock %}

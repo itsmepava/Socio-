@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}Accept invitation{% endblock %}
+{% block content %}
+  <section class="auth-layout">
+    <aside class="auth-aside"><div><span class="eyebrow">You’re invited</span><h1 class="auth-title">Welcome to {{ invite.organization.name }}.</h1><p class="auth-description">Your organization has added you as a member. Complete your Socio profile and onboarding details to access club updates.</p></div><div class="auth-aside-bottom">This private invite can be claimed once and expires after 7 days.</div></aside>
+    <div class="auth-main"><div class="auth-form-wrap"><h2 class="auth-heading">Activate your Socio access</h2><p class="auth-lede">The invitation was sent to {{ invite.email }}. Your organization has already recorded your membership; Socio will not ask you to pay to accept it.</p>
+      <form method="post" class="form-stack" autocomplete="on"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field"><label for="email">Email</label><input id="email" value="{{ invite.email }}" readonly></div>
+        <div class="field"><label for="full_name">Full name</label><input id="full_name" name="full_name" maxlength="120" value="{{ invite.full_name }}" autocomplete="name" required></div>
+        <div class="field"><label for="gender">Gender <span class="field-hint">Optional</span></label><select id="gender" name="gender"><option value="">Prefer not to provide</option><option>Woman</option><option>Man</option><option>Non-binary</option><option>Prefer not to say</option><option>Other</option></select></div>
+        {% if signed_member %}<p class="field-hint">You’re signed in. This invitation will add {{ invite.organization.name }} to your Socio account.</p>{% elif existing_account %}<div class="field"><label for="password">Your Socio password</label><input id="password" name="password" type="password" autocomplete="current-password" required></div>{% else %}<div class="field"><label for="password">Create a password <span class="field-hint">12 to 128 characters</span></label><input id="password" name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div><div class="field"><label for="confirm_password">Confirm password</label><input id="confirm_password" name="confirm_password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>{% endif %}
+        {% if onboarding_fields %}<div class="onboarding-questions"><h3>{{ invite.organization.name }} onboarding form</h3><p class="section-copy">Your organization requests these details for its member records.</p>
+          {% for field in onboarding_fields %}<div class="field">{% if field.kind == 'checkbox' %}<label class="confirm-reset"><input type="checkbox" name="custom_{{ field.id }}" value="yes" {{ 'required' if field.required else '' }}><span>{{ field.label }}{% if field.required %} <strong>*</strong>{% endif %}</span></label>{% else %}<label for="custom-{{ field.id }}">{{ field.label }}{% if field.required %} <span class="field-hint">Required</span>{% endif %}</label>{% if field.kind == 'long_text' %}<textarea id="custom-{{ field.id }}" name="custom_{{ field.id }}" maxlength="2000" rows="3" {{ 'required' if field.required else '' }}></textarea>{% else %}<input id="custom-{{ field.id }}" name="custom_{{ field.id }}" maxlength="500" {{ 'required' if field.required else '' }}>{% endif %}{% endif %}</div>{% endfor %}
+        </div>{% endif %}
+        <label class="confirm-reset"><input type="checkbox" name="consent" value="yes" required><span>I agree that Socio will store my profile and onboarding responses so {{ invite.organization.name }} can manage my membership and send relevant updates.</span></label>
+        <button class="button form-submit" type="submit">Complete profile and open Socio →</button>
+      </form>
+    </div></div>
+  </section>
+{% endblock %}

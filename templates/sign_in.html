@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Sign in to Socio{% endblock %}
+{% block content %}
+  <section class="sign-in-intro">
+    <span class="eyebrow">Welcome to Socio</span>
+    <h1 class="page-heading">Choose your workspace</h1>
+    <p class="page-intro">Sign in to your member account, manage your organization, or continue to the private platform team area.</p>
+  </section>
+  <section class="sign-in-choices" aria-label="Choose a sign-in area">
+    <a class="panel sign-in-choice" href="{{ url_for('member_sign_in') }}"><span class="choice-number">01</span><span class="eyebrow">For members</span><h2>My clubs</h2><p>See your organizations, events, offers, and updates in one place.</p><span class="choice-action">Member sign in <span aria-hidden="true">→</span></span></a>
+    <a class="panel sign-in-choice" href="{{ url_for('login', role='organization_admin') }}"><span class="choice-number">02</span><span class="eyebrow">For organizations</span><h2>Club workspace</h2><p>Manage your roster, staff access, onboarding, and member communications.</p><span class="choice-action">Organization sign in <span aria-hidden="true">→</span></span></a>
+    <a class="panel sign-in-choice" href="{{ url_for('admin_entry') }}"><span class="choice-number">03</span><span class="eyebrow">For Socio staff</span><h2>Platform team</h2><p>Continue to the private area for platform operations and organization review.</p><span class="choice-action">Platform admin sign in <span aria-hidden="true">→</span></span></a>
+  </section>
+  <p class="sign-in-register">New organization to Socio? <a href="{{ url_for('register_organization') }}">Set up an organization portal</a>.</p>
+{% endblock %}

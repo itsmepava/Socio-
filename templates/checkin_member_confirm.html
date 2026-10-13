@@ -1,0 +1,5 @@
+{% extends 'base.html' %}
+{% block title %}Confirm member check-in{% endblock %}
+{% block content %}
+  <section class="panel checkin-confirm-panel"><span class="eyebrow">{{ membership.organization.name }} · Attendance</span><h1 class="page-heading">Confirm member check-in</h1><p class="page-intro">Check the club and member details before recording entry.</p><dl class="checkin-member-details"><div><dt>Member</dt><dd>{{ membership.full_name }}</dd></div><div><dt>Member email</dt><dd>{{ membership.user.email }}</dd></div><div><dt>Membership tier</dt><dd>{{ membership.plan.name }}</dd></div><div><dt>Club</dt><dd>{{ membership.organization.name }}</dd></div></dl><form method="post" class="form-stack"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button" type="submit">Confirm and record attendance</button></form><p class="field-hint">Pass expires {{ qr_pass.expires_at.strftime('%H:%M UTC') }} and cannot be reused.</p></section>
+{% endblock %}

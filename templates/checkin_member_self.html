@@ -1,0 +1,5 @@
+{% extends 'base.html' %}
+{% block title %}Check in at {{ membership.organization.name }}{% endblock %}
+{% block content %}
+  <section class="panel checkin-confirm-panel"><span class="eyebrow">Member check-in · {{ membership.organization.name }}</span><h1 class="page-heading">Welcome, {{ display_name(g.user).split(' ')[0] }}</h1><p class="page-intro">Confirm your attendance at {{ membership.organization.name }}.</p><dl class="checkin-member-details"><div><dt>Member</dt><dd>{{ membership.full_name }}</dd></div><div><dt>Membership</dt><dd>{{ membership.plan.name }}</dd></div><div><dt>Club code expires</dt><dd>{{ checkin_code.expires_at.strftime('%H:%M UTC') }}</dd></div></dl>{% if existing %}<div class="notice"><span class="notice-icon" aria-hidden="true">✓</span><span>You are already checked in for this code.</span></div>{% else %}<form method="post" class="form-stack"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button" type="submit">Check me in</button></form>{% endif %}<p class="field-hint">Only your active membership with this club can use this check-in code.</p></section>
+{% endblock %}

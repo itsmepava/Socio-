@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% block title %}Organization workspace{% endblock %}
+{% block content %}
+  {% set available_count = plans|rejectattr('archived')|list|length %}
+  <div class="dashboard-head">
+    <div><span class="eyebrow">Organization portal · {{ organization.name }}</span><h1 class="page-heading">{% if has_admin_permission('team') %}{{ organization.name }} Main Dashboard{% else %}{{ g.user.admin_title or 'Club staff' }} Workspace{% endif %}</h1><p class="page-intro">Manage existing members, onboarding, and club updates from your workspace.</p></div>
+    <div class="dashboard-actions">{% if has_admin_permission('members') %}<a class="button" href="{{ url_for('organization_members') }}">Members & updates</a><a class="button button-quiet" href="{{ url_for('organization_forms') }}">Onboarding form</a>{% if organization.status == 'Approved' %}<a class="button button-quiet" href="{{ url_for('organization_attendance') }}">Check-in & attendance</a>{% endif %}{% endif %}{% if has_admin_permission('team') %}<a class="button button-quiet" href="{{ url_for('organization_team') }}">Manage team</a>{% endif %}</div>
+  </div>
+  <div class="plan-summary"><span><strong>{{ organization.name }}</strong> <span class="status-badge status-{{ organization.status|lower }}">{{ organization.status }}</span></span><span>{{ available_count }} available member tier{{ '' if available_count == 1 else 's' }}</span></div>
+  {% if has_admin_permission('branding') %}
+  <section class="panel home-section logo-manager" aria-labelledby="organization-logo-title">
+    <div class="panel-head"><div><h2 class="section-heading" id="organization-logo-title">Organization logo</h2><p class="section-copy">Add a square logo so members can recognize your organization at a glance in the gallery.</p></div></div>
+    <div class="logo-manager-content">
+      <div class="organization-avatar organization-avatar-large" aria-hidden="true">{% if organization.logo_filename %}<img src="{{ url_for('organization_logo', organization_id=organization.id) }}" alt="" loading="lazy">{% else %}{{ organization.name[:1]|upper }}{% endif %}</div>
+      <div class="logo-manager-actions"><form method="post" action="{{ url_for('organization_upload_logo') }}" enctype="multipart/form-data" class="logo-upload-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label for="organization-logo-file">Choose logo <span class="field-hint">PNG, JPEG, or WebP · max 1.5 MB</span></label><input id="organization-logo-file" name="logo_file" type="file" accept="image/png,image/jpeg,image/webp" required><button class="button button-small" type="submit">Upload logo</button></form>
+      {% if organization.logo_filename %}<form method="post" action="{{ url_for('organization_remove_logo') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button button-quiet button-small" type="submit">Remove logo</button></form>{% endif %}</div>
+    </div>
+  </section>
+  {% endif %}
+  {% if organization.status == 'Approved' %}<div class="invite-link-row"><div><strong>Your club is active on Socio</strong><p>Add members who have already joined your organization, then keep them informed through their Socio inbox.</p></div><a class="button button-quiet button-small" href="{{ url_for('organization_members') }}">Open member directory →</a></div>{% endif %}
+
+  {% if has_admin_permission('plans') %}
+  <section class="panel home-section" aria-labelledby="loyalty-title">
+    <div class="panel-head"><div><h2 class="section-heading" id="loyalty-title">Loyalty gifts</h2><p class="section-copy">Thank long-term supporters with extra membership days. Gifts do not add a charge.</p></div></div>
+    {% if organization.status == 'Approved' %}<form method="post" action="{{ url_for('organization_loyalty_settings') }}" class="loyalty-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="confirm-reset"><input type="checkbox" name="loyalty_reward_enabled" value="yes" {{ 'checked' if organization.loyalty_reward_enabled else '' }}><span>Automatically gift active members once they reach the milestone</span></label>
+      <div class="field"><label for="loyalty-after-days">Active support milestone</label><select id="loyalty-after-days" name="loyalty_reward_after_days">{% for days in (30, 60, 90, 180, 365) %}<option value="{{ days }}" {{ 'selected' if organization.loyalty_reward_after_days == days else '' }}>{{ days }} days</option>{% endfor %}</select></div>
+      <div class="field"><label for="loyalty-gift-days">Gift length</label><select id="loyalty-gift-days" name="loyalty_reward_days">{% for days in (7, 14, 30, 60) %}<option value="{{ days }}" {{ 'selected' if organization.loyalty_reward_days == days else '' }}>{{ days }} extra membership days</option>{% endfor %}</select></div>
+      <p class="field-hint">Each membership can receive this loyalty gift once. It extends the current membership period; the regular plan price stays the same.</p>
+      <button class="button button-small" type="submit">Save loyalty gift</button>
+    </form>{% else %}<div class="panel-body"><p class="section-copy">Organization approval is needed before setting loyalty gifts.</p></div>{% endif %}
+  </section>
+  {% endif %}
+
+  {% if has_admin_permission('events') %}
+  <section class="panel home-section event-manager" aria-labelledby="events-title">
+    <div class="panel-head"><div><h2 class="section-heading" id="events-title">Events and posters</h2><p class="section-copy">Share upcoming events and posters with your club members.</p></div></div>
+    {% if organization.status == 'Approved' %}<form method="post" action="{{ url_for('organization_create_event') }}" enctype="multipart/form-data" class="event-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="field"><label for="event-title">Event name</label><input id="event-title" name="title" maxlength="120" placeholder="e.g. Annual club open day" required></div>
+      <div class="field"><label for="event-date">Date</label><input id="event-date" name="event_date" type="date" min="{{ today_date }}" required></div>
+      <div class="field"><label for="event-venue">Location <span class="field-hint">Optional</span></label><input id="event-venue" name="venue" maxlength="200" placeholder="Venue or online"></div>
+      <div class="field event-description"><label for="event-description">Details</label><textarea id="event-description" name="description" maxlength="1000" rows="3" placeholder="What should members know?" required></textarea></div>
+      <div class="field event-poster"><label for="event-poster-file">Poster image <span class="field-hint">Optional · PNG, JPEG, or WebP · max 5 MB</span></label><input id="event-poster-file" name="poster_file" type="file" accept="image/png,image/jpeg,image/webp"></div>
+      <button class="button form-submit" type="submit">Publish event</button>
+    </form>{% endif %}
+    {% if events %}<div class="event-list">{% for event in events %}<article class="event-row">{% if event.poster_filename %}<img class="event-poster-thumb" src="{{ url_for('organization_event_poster', event_id=event.id) }}" alt="Poster for {{ event.title }}" loading="lazy">{% endif %}<div class="event-row-copy"><span class="eyebrow">{{ 'Archived' if event.archived else ('Upcoming' if event.event_date.isoformat() >= today_date else 'Past') }} · {{ event.event_date.strftime('%d %b %Y') }}</span><h3>{{ event.title }}</h3><p>{{ event.description }}</p>{% if event.venue %}<small>{{ event.venue }}</small>{% endif %}</div>{% if not event.archived %}<form method="post" action="{{ url_for('organization_archive_event', event_id=event.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button button-quiet button-small" type="submit">Remove from gallery</button></form>{% endif %}</article>{% endfor %}</div>{% else %}<div class="empty-state event-empty"><strong>No events posted</strong><p>Your upcoming events will be shown here after you publish them.</p></div>{% endif %}
+  </section>
+  {% endif %}
+
+  {% if has_admin_permission('offers') %}
+  <section class="panel home-section offer-manager" aria-labelledby="offers-title">
+    <div class="panel-head"><div><h2 class="section-heading" id="offers-title">Member offers</h2><p class="section-copy">Highlight a welcome bonus, benefit, or limited-time offer. Offers are informational and never alter plan prices.</p></div></div>
+    {% if organization.status == 'Approved' %}
+      <form method="post" action="{{ url_for('organization_create_offer') }}" class="offer-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field"><label for="offer-title">Offer title</label><input id="offer-title" name="title" maxlength="100" placeholder="e.g. New member welcome pack" required></div>
+        <div class="field"><label for="offer-type">Type</label><select id="offer-type" name="offer_type">{% for type in offer_types %}<option>{{ type }}</option>{% endfor %}</select></div>
+        <div class="field offer-description"><label for="offer-description">Details</label><input id="offer-description" name="description" maxlength="500" placeholder="Tell members what is included" required></div>
+        <div class="field"><label for="offer-plan">For member tier</label><select id="offer-plan" name="plan_id"><option value="">All members</option>{% for plan in plans if not plan.archived %}<option value="{{ plan.id }}">{{ plan.name }}</option>{% endfor %}</select></div>
+        <div class="field"><label for="offer-start">Starts on demo day</label><input id="offer-start" name="start_day" type="number" min="{{ simulated_day }}" value="{{ simulated_day }}" required></div>
+        <div class="field"><label for="offer-end">Ends on demo day <span class="field-hint">Optional</span></label><input id="offer-end" name="end_day" type="number" min="{{ simulated_day }}" placeholder="No end date"></div>
+        <button class="button form-submit" type="submit">Publish offer</button>
+      </form>
+    {% else %}<div class="panel-body"><p class="section-copy">Organization approval is needed before publishing offers.</p></div>{% endif %}
+    {% if offers %}<div class="offer-list">{% for offer in offers %}<article class="offer-row"><div><span class="eyebrow">{{ offer.offer_type }} · {% if offer.archived %}Archived{% elif offer.start_day > simulated_day %}Scheduled{% elif offer.end_day is not none and offer.end_day < simulated_day %}Ended{% else %}Live{% endif %}</span><h3>{{ offer.title }}</h3><p>{{ offer.description }}</p><small>{% if offer.plan %}{{ offer.plan.name }}{% else %}All plans{% endif %} · Day {{ offer.start_day }}{% if offer.end_day is not none %}–{{ offer.end_day }}{% endif %}</small></div>{% if not offer.archived %}<form method="post" action="{{ url_for('organization_archive_offer', offer_id=offer.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button button-quiet button-small" type="submit">Remove</button></form>{% endif %}</article>{% endfor %}</div>{% else %}<div class="empty-state offer-empty"><strong>No offers yet</strong><p>Create an offer to share it with your club members.</p></div>{% endif %}
+  </section>
+  {% endif %}
+
+  {% if has_admin_permission('members') %}
+  <section class="panel home-section" aria-labelledby="member-import-title">
+    <div class="panel-head"><div><h2 class="section-heading" id="member-import-title">Add existing club members</h2><p class="section-copy">Upload a UTF-8 CSV with full_name, email, and plan_name. Members receive an email link to activate Socio. Up to 500 rows and 2 MB.</p></div></div>
+    {% if organization.status == 'Approved' %}
+      <div class="member-tools"><a class="button button-quiet button-small" href="{{ url_for('organization_member_import_template') }}">Download CSV template ↓</a>
+        <form method="post" enctype="multipart/form-data" action="{{ url_for('organization_import_members') }}" class="member-search">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label for="member-roster">Roster CSV</label><input id="member-roster" name="file" type="file" accept=".csv,text/csv" required><button class="button button-small" type="submit">Import and create invites</button>
+        </form>
+      </div>
+      <div class="panel-body"><p class="section-copy">The organization records the member’s club access first. Socio emails a one-time activation link; members complete their profile, consent, and your onboarding form. No Socio checkout is involved.</p></div>
+    {% else %}<div class="panel-body"><p class="section-copy">Organization approval is needed before you can invite members.</p></div>{% endif %}
+    {% if invitations %}<div class="table-wrap"><table><thead><tr><th>Member</th><th>Email</th><th>Plan</th><th>Invitation</th><th>Expires</th><th>Actions</th></tr></thead><tbody>{% for invite in invitations %}<tr><td>{{ invite.full_name }}</td><td>{{ invite.email }}</td><td>{{ invite.plan.name }}</td><td>{% if invite.status == 'Pending' and simulated_day >= invite.expires_day %}Expired{% elif invite.status == 'Pending' and invite.email_sent_at %}Email sent{% elif invite.status == 'Pending' %}Email not sent{% else %}{{ invite.status }}{% endif %}</td><td>Day {{ invite.expires_day }}</td><td>{% if invite.status == 'Pending' %}<form method="post" action="{{ url_for('organization_resend_member_invitation', invitation_id=invite.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button button-quiet button-small" type="submit">{{ 'Resend' if invite.email_sent_at else 'Send email' }}</button></form><form method="post" action="{{ url_for('organization_revoke_invitation', invitation_id=invite.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button button-quiet button-small" type="submit">Revoke</button></form>{% endif %}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+  </section>
+  {% endif %}
+
+  <div class="plans-layout">
+  {% if has_admin_permission('plans') %}
+    <section class="plans-main" aria-labelledby="plans-list-title">
+      <div class="section-topline"><div><h2 class="section-heading" id="plans-list-title">Member tiers</h2><p class="section-copy">{{ plans|length }} tier{{ '' if plans|length == 1 else 's' }} created</p></div></div>
+      <div class="plan-list" style="margin-top: 15px">
+        {% for plan in plans %}
+          <article class="plan-card">
+            <div>
+              <h3 class="plan-name">{{ plan.name }}</h3>
+              {% if plan.benefits %}<p class="plan-benefits">{{ plan.benefits }}</p>{% endif %}
+              <div class="plan-meta"><span class="plan-period">Member tier</span><span class="status-badge {{ 'status-archived' if plan.archived else 'status-approved' }}">{{ 'Archived' if plan.archived else 'Available' }}</span></div>
+            </div>
+            <div class="plan-card-actions">
+              {% if not plan.archived %}
+                <form class="inline-form" method="post" action="{{ url_for('archive_plan', plan_id=plan.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button button-quiet button-small" type="submit">Archive tier</button></form>
+              {% endif %}
+            </div>
+          </article>
+        {% else %}
+          <div class="panel"><div class="empty-state"><span class="empty-icon" aria-hidden="true">＋</span><strong>Your member tiers start here</strong><p>Create tiers that you can assign when adding existing club members.</p></div></div>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+    <aside class="panel create-panel" aria-labelledby="create-plan-title">
+      <div class="panel-head"><div><h2 class="section-heading" id="create-plan-title">Create a member tier</h2><p class="section-copy">Use tiers to group members and target relevant club updates.</p></div></div>
+      <div class="panel-body">
+        {% if organization.status == 'Approved' %}
+          <form method="post" class="form-stack">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="field"><label for="name">Tier name</label><input id="name" name="name" maxlength="100" placeholder="e.g. Senior member" required></div>
+            <input type="hidden" name="price_minor" value="0"><input type="hidden" name="billing_period" value="yearly">
+            <div class="field"><label for="benefits">Tier notes <span class="field-hint">Optional</span></label><textarea id="benefits" name="benefits" maxlength="2000" placeholder="Internal description or member benefits"></textarea></div>
+            <p class="price-note">Socio records the member’s club access. Fees and admission decisions remain with your organization.</p>
+            <button class="button form-submit" type="submit">Create member tier</button>
+          </form>
+        {% else %}
+          <div class="empty-state" style="padding: 20px 5px"><span class="empty-icon" aria-hidden="true">◷</span><strong>Approval is needed first</strong><p>You can create member tiers once the platform team approves your organization.</p></div>
+        {% endif %}
+      </div>
+    </aside>
+  </div>
+
+{% endblock %}

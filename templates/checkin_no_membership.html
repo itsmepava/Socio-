@@ -1,0 +1,5 @@
+{% extends 'base.html' %}
+{% block title %}No active membership{% endblock %}
+{% block content %}
+  <section class="panel checkin-state-panel"><span class="eyebrow">{{ organization.name }}</span><h1 class="page-heading">No active membership found</h1><p class="page-intro">This Socio account does not have an active membership with {{ organization.name }}. Ask the club team to check your account before trying again.</p><a class="button button-quiet" href="{{ url_for('member_directory') }}">Back to my clubs</a></section>
+{% endblock %}

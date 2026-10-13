@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}{{ offer.title }}{% endblock %}
+{% block content %}
+  <div class="detail-back"><a class="button-text" href="{{ url_for('public_organization', organization_id=organization.id) }}">← {{ organization.name }}</a><a class="button-text" href="{{ url_for('member_directory') }}">My clubs</a></div>
+  <article class="content-detail-card offer-detail-card">
+    <div class="content-detail-body"><span class="offer-type-pill">{{ offer.offer_type }}</span><span class="eyebrow">Community offer · {{ organization.name }}</span><h1 class="page-heading">{{ offer.title }}</h1><div class="content-detail-description">{{ offer.description }}</div>
+      <dl class="detail-facts"><div><dt>Available to</dt><dd>{% if offer.plan %}{{ offer.plan.name }} members{% else %}All club members{% endif %}</dd></div><div><dt>Offer period</dt><dd>From simulated day {{ offer.start_day }}{% if offer.end_day is not none %} through day {{ offer.end_day }}{% else %} · No scheduled end{% endif %}</dd></div></dl>
+      <p class="prototype-note">Confirm any offer redemption details directly with the organization.</p>
+      <div class="detail-actions"><a class="button" href="{{ url_for('member_notifications') }}">View club updates →</a><a class="button button-quiet" href="{{ url_for('member_directory') }}">Back to my clubs</a></div>
+    </div>
+  </article>
+{% endblock %}

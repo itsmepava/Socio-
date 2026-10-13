@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block title %}{{ event.title }}{% endblock %}
+{% block content %}
+  <div class="detail-back"><a class="button-text" href="{{ url_for('public_organization', organization_id=organization.id) }}">← {{ organization.name }}</a><a class="button-text" href="{{ url_for('member_directory') }}">My clubs</a></div>
+  <article class="content-detail-card">
+    {% if event.poster_filename %}<img class="content-detail-poster" src="{{ url_for('organization_event_poster', event_id=event.id) }}" alt="Poster for {{ event.title }}">{% endif %}
+    <div class="content-detail-body"><span class="eyebrow">Organization event · {{ event.event_date.strftime('%A, %d %B %Y') }}</span><h1 class="page-heading">{{ event.title }}</h1><p class="page-intro">Hosted by {{ organization.name }}{% if event.venue %} · {{ event.venue }}{% endif %}</p><div class="content-detail-description">{{ event.description }}</div>
+      <div class="detail-actions"><a class="button" href="{{ url_for('member_notifications') }}">View club updates →</a><a class="button button-quiet" href="{{ url_for('member_directory') }}">Back to my clubs</a></div>
+    </div>
+  </article>
+{% endblock %}

@@ -1,0 +1,16 @@
+{
+  "id": "/",
+  "name": "Socio Membership",
+  "short_name": "Socio",
+  "description": "Discover organizations and manage your Socio memberships.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f7f5f2",
+  "theme_color": "#f7f5f2",
+  "icons": [
+    { "src": "/static/icons/socio-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/static/icons/socio-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

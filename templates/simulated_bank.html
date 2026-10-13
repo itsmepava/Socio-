@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Simulated payment{% endblock %}
+{% block content %}
+  <section class="bank-shell">
+    <div class="bank-banner"><span class="bank-symbol" aria-hidden="true">!</span><div><strong>SIMULATED BANK PAGE</strong><span>Demo only. No real payment or bank connection.</span></div><span class="simulated-pill">TEST FLOW</span></div>
+    <div class="bank-content">
+      <span class="eyebrow">Payment simulation · #{{ payment.id }}</span>
+      <h1 class="page-heading">Complete the demo payment</h1>
+      <p class="page-intro">Choose an outcome to see how Socio responds.</p>
+      <div class="bank-amount"><span>Amount due</span><strong>LKR {{ '{:,.2f}'.format(payment.amount_minor / 100) }}</strong></div>
+      <dl class="bank-details"><div><dt>Organization</dt><dd>{{ payment.organization.name }}</dd></div><div><dt>Membership plan</dt><dd>{{ payment.plan.name }}</dd></div><div><dt>Payment type</dt><dd>{{ payment.kind|capitalize }}</dd></div><div><dt>Status</dt><dd><span class="status-badge status-pending">Awaiting result</span></dd></div></dl>
+      <section class="simulated-card-panel" aria-labelledby="simulated-card-title"><h2 class="section-heading" id="simulated-card-title">Try the card checkout</h2><p class="section-copy">Use the sample card below. These fields stay in your browser: Socio does not submit, store, or process card information.</p><div class="simulated-card-note"><strong>Sample card</strong><span>4242 4242 4242 4242</span><small>Use a future expiry such as 12/30 and any 3-digit CVC.</small></div><form id="simulated-card-form" method="post" action="{{ url_for('simulated_bank_action', payment_id=payment.id, action='success') }}" class="form-stack simulated-card-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><div class="field"><label for="demo-cardholder">Name on card</label><input id="demo-cardholder" type="text" autocomplete="off" maxlength="80" required placeholder="Cardholder name"></div><div class="field"><label for="demo-card-number">Card number</label><input id="demo-card-number" type="text" inputmode="numeric" autocomplete="off" maxlength="23" required placeholder="4242 4242 4242 4242" aria-describedby="demo-card-error"></div><div class="billing-fields"><div class="field"><label for="demo-card-expiry">Expiry (MM/YY)</label><input id="demo-card-expiry" type="text" inputmode="numeric" autocomplete="off" maxlength="5" required placeholder="12/30" aria-describedby="demo-card-error"></div><div class="field"><label for="demo-card-cvc">CVC</label><input id="demo-card-cvc" type="password" inputmode="numeric" autocomplete="off" maxlength="4" required placeholder="123" aria-describedby="demo-card-error"></div></div><p id="demo-card-error" class="field-hint simulated-card-error" role="alert" aria-live="polite"></p><button class="button" type="submit">Simulate successful payment</button><p class="simulated-card-disclaimer">Do not enter a real card. Only the CSRF protection value is sent to the local demo route.</p></form></section>
+      <h2 class="section-heading bank-choice-title">Or choose another simulated result</h2>
+      <div class="bank-outcomes">
+        <form method="post" action="{{ url_for('simulated_bank_action', payment_id=payment.id, action='failure') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button button-quiet" type="submit">Payment fails</button><p>Try again from your member page.</p></form>
+        <form method="post" action="{{ url_for('simulated_bank_action', payment_id=payment.id, action='late') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button button-quiet" type="submit">Confirmation is delayed</button><p>An admin can deliver the late confirmation.</p></form>
+        <form method="post" action="{{ url_for('simulated_bank_action', payment_id=payment.id, action='duplicate') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button button-quiet" type="submit">Send confirmation twice</button><p>Check that repeated confirmation is safe.</p></form>
+        <form method="post" action="{{ url_for('simulated_bank_action', payment_id=payment.id, action='abandon') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button button-quiet" type="submit">Abandon payment</button><p>Return to your membership without completing.</p></form>
+      </div>
+      <a class="bank-back-link" href="{{ url_for('member_home') }}">← Back to my membership</a>
+    </div>
+  </section>
+  <script src="{{ url_for('static', filename='simulated-card.js') }}" defer></script>
+{% endblock %}

@@ -1,0 +1,5 @@
+{% extends 'base.html' %}
+{% block title %}Membership is inactive{% endblock %}
+{% block content %}
+  <section class="panel checkin-state-panel"><span class="eyebrow">{{ membership.organization.name }}</span><h1 class="page-heading">Membership is not active</h1><p class="page-intro">{{ membership.full_name }}’s current membership is not active, so attendance cannot be recorded from this pass. Please check with the organization team.</p><a class="button button-quiet" href="{{ url_for('admin_organizations') if g.user and g.user.role == 'platform_admin' else url_for('organization_attendance') if g.user and g.user.role == 'organization_admin' else url_for('member_directory') }}">Continue</a></section>
+{% endblock %}

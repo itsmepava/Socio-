@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}My profile{% endblock %}
+{% block content %}
+  <div class="dashboard-head"><div><span class="eyebrow">Member account</span><h1 class="page-heading">My profile</h1><p class="page-intro">Keep your contact details and profile picture up to date.</p></div><div class="dashboard-actions"><a class="button button-quiet" href="{{ url_for('member_directory') }}">Back to my clubs</a></div></div>
+  <section class="panel profile-editor">
+    <div class="panel-head"><div><h2 class="section-heading">Personal details</h2><p class="section-copy">Your email address is your sign-in and cannot be changed here.</p></div></div>
+    <form method="post" enctype="multipart/form-data" class="form-stack profile-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="profile-photo-row"><div class="profile-photo-preview">{% if user.profile_image %}<img src="{{ url_for('member_profile_picture') }}" alt="Your current profile picture">{% else %}<span aria-hidden="true">{{ display_name(user)[0]|upper }}</span>{% endif %}</div><div class="field"><label for="profile-image">Profile picture <span class="field-hint">Optional · PNG, JPEG, or WebP · up to 3 MB</span></label><input id="profile-image" name="profile_image" type="file" accept="image/png,image/jpeg,image/webp" capture="user"><span class="field-hint">Socio resizes the picture and removes photo metadata before saving it.</span>{% if user.profile_image %}<label class="checkbox-line"><input type="checkbox" name="remove_profile_image" value="yes"><span>Remove current picture</span></label>{% endif %}</div></div>
+      <div class="field"><label for="profile-full-name">Full name</label><input id="profile-full-name" name="full_name" maxlength="120" required value="{{ user.full_name or '' }}" autocomplete="name"></div>
+      <div class="field"><label for="profile-email">Email</label><input id="profile-email" type="email" value="{{ user.email }}" readonly></div>
+      <div class="field"><label for="profile-phone">Mobile number <span class="field-hint">Optional</span></label><input id="profile-phone" name="phone_number" type="tel" maxlength="32" value="{{ user.phone_number or '' }}" autocomplete="tel" placeholder="+94 77 123 4567"></div>
+      <div class="field"><label for="profile-gender">Gender <span class="field-hint">Optional</span></label><select id="profile-gender" name="gender"><option value="" {% if not user.gender %}selected{% endif %}>Prefer not to provide</option>{% for option in ['Woman','Man','Non-binary','Prefer not to say','Other'] %}<option value="{{ option }}" {% if user.gender == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select></div>
+      <button class="button" type="submit">Save profile</button>
+    </form>
+  </section>
+{% endblock %}

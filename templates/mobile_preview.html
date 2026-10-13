@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}Mobile app preview{% endblock %}
+{% block content %}
+<section class="mobile-preview-page">
+  <div class="mobile-preview-intro">
+    <span class="eyebrow">Clickable product concept</span>
+    <h1 class="page-heading">Socio in your pocket</h1>
+    <p class="page-intro">A preview of how members can keep their clubs, updates, and digital attendance passes together. This is a web mockup for the demo; the future Android and iOS apps will connect to the GCP-hosted Socio service.</p>
+    <div class="mobile-preview-switch" aria-label="Choose preview platform">
+      <a class="button {{ 'is-selected' if platform == 'android' else 'button-quiet' }}" href="{{ url_for('mobile_app_preview', platform='android', tab=tab) }}">Android concept</a>
+      <a class="button {{ 'is-selected' if platform == 'ios' else 'button-quiet' }}" href="{{ url_for('mobile_app_preview', platform='ios', tab=tab) }}">iPhone concept</a>
+    </div>
+  </div>
+
+  <div class="mobile-preview-layout">
+    <div class="phone-frame {{ 'phone-ios' if platform == 'ios' else 'phone-android' }}" aria-label="{{ 'iPhone' if platform == 'ios' else 'Android phone' }} app mockup">
+      <div class="phone-screen">
+        <div class="phone-status"><span>9:41</span><span>● ● ●　▰</span></div>
+        <header class="phone-appbar"><a href="{{ url_for('mobile_app_preview', platform=platform, tab='clubs') }}" class="phone-brand"><img src="{{ url_for('static', filename='socio-logo-light.png') }}" alt="Socio"></a><span class="phone-avatar">{{ display_name(member)[0]|upper if member else 'P' }}</span></header>
+        <main class="phone-content">
+          {% if tab == 'clubs' %}
+            <p class="phone-kicker">YOUR SOCIO HOME</p><h2>Hello, {{ display_name(member).split(' ')[0] if member else 'Pavara' }}<span class="phone-accent">.</span></h2><p class="phone-muted">Your clubs, all in one place.</p>
+            {% if member and memberships %}
+              {% for membership in memberships %}<article class="phone-club-card"><div class="phone-club-mark">{{ membership.organization.name[:1]|upper }}</div><div class="phone-club-copy"><strong>{{ membership.organization.name }}</strong><span>{{ membership.plan.name }} · {{ membership_status(membership) }}</span></div><a class="phone-arrow" href="{{ url_for('member_qr_card', membership_id=membership.id) }}" aria-label="Open {{ membership.organization.name }} membership pass">›</a><div class="phone-club-meta"><span>{{ membership.organization.name }} membership</span><a href="{{ url_for('member_qr_card', membership_id=membership.id) }}">View pass</a></div></article>{% endfor %}
+            {% else %}
+              <div class="phone-sample-label">Illustrative preview · sample clubs</div>
+              {% for club in sample_clubs %}<article class="phone-club-card"><div class="phone-club-mark">{{ club.name[:1] }}</div><div class="phone-club-copy"><strong>{{ club.name }}</strong><span>{{ club.tier }} · {{ club.status }}</span></div><span class="phone-arrow">›</span><div class="phone-club-meta"><span>{{ club.detail }}</span><span>{{ club.offer }}</span></div></article>{% endfor %}
+            {% endif %}
+            <div class="phone-upgrade-note"><span class="phone-spark">✦</span><div><strong>Your membership, made simpler</strong><span>Stay up to date with the communities you belong to.</span></div></div>
+          {% elif tab == 'updates' %}
+            <p class="phone-kicker">FROM YOUR CLUBS</p><h2>Updates<span class="phone-accent">.</span></h2><p class="phone-muted">Events, offers, and messages from your communities.</p>
+            {% if member and updates %}{% for update in updates %}<article class="phone-update-card"><span class="phone-update-dot"></span><div><span class="phone-update-org">{{ update.organization.name }}</span><strong>{{ update.title }}</strong><p>{{ update.body }}</p><small>{{ update.created_at.strftime('%d %b · %H:%M') }}</small></div></article>{% endfor %}{% elif member %}<div class="phone-empty">You’re all caught up. New club updates will appear here.</div>{% else %}<div class="phone-sample-label">Illustrative preview · sample updates</div>{% for update in sample_updates %}<article class="phone-update-card"><span class="phone-update-dot"></span><div><span class="phone-update-org">{{ update.organization }}</span><strong>{{ update.title }}</strong><p>{{ update.body }}</p><small>{{ update.time }}</small></div></article>{% endfor %}{% endif %}
+          {% elif tab == 'passes' %}
+            <p class="phone-kicker">QUICK CLUB CHECK-IN</p><h2>Digital passes<span class="phone-accent">.</span></h2><p class="phone-muted">Show a pass to club staff, or scan a club code to check in.</p>
+            {% if member and memberships %}{% for membership in memberships %}<article class="phone-pass-card"><div class="phone-pass-top"><span>{{ membership.organization.name }}</span><span class="phone-pass-active">● Active</span></div><strong>{{ membership.full_name }}</strong><span class="phone-pass-tier">{{ membership.plan.name }}</span><a class="button phone-pass-button" href="{{ url_for('member_qr_card', membership_id=membership.id) }}">Open check-in pass <span aria-hidden="true">→</span></a><small>Staff scans this one-time QR code.</small></article>{% endfor %}{% elif member %}<div class="phone-empty">Your club passes appear here after an organization invites and activates you.</div>{% else %}<div class="phone-sample-label">Illustrative preview · QR is not valid</div><article class="phone-pass-card"><div class="phone-pass-top"><span>Colombo Chess Club</span><span class="phone-pass-active">● Active</span></div><strong>Pavara Kekulawala</strong><span class="phone-pass-tier">Annual Member</span><div class="phone-demo-qr" aria-label="Non-functional sample QR illustration"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><small>Concept only. Real member passes use a short-lived one-time code.</small></article>{% endif %}
+            <div class="phone-scan-tip"><strong>Club check-in?</strong><span>Open your phone camera and scan the club’s displayed Socio code while signed in.</span></div>
+          {% else %}
+            <p class="phone-kicker">YOUR ACCOUNT</p><h2>Profile<span class="phone-accent">.</span></h2><div class="phone-profile"><span class="phone-profile-avatar">{{ display_name(member)[0]|upper if member else 'P' }}</span><strong>{{ display_name(member) if member else 'Pavara Kekulawala' }}</strong><span>{{ member.email if member else 'member@example.com' }}</span></div><div class="phone-setting-row"><span>Club notifications</span><span class="phone-toggle-on">On</span></div><div class="phone-setting-row"><span>Theme</span><span>System default</span></div><div class="phone-setting-row"><span>Memberships</span><span>{{ memberships|length if member else 2 }}</span></div><p class="phone-sample-label">{{ 'Your signed-in member account' if member else 'Illustrative preview · sample profile' }}</p>
+          {% endif %}
+        </main>
+        <nav class="phone-tabs" aria-label="Preview app tabs">
+          {% for key,label,icon in [('clubs','Clubs','⌂'),('updates','Updates','◉'),('passes','Passes','▦'),('profile','Profile','○')] %}<a class="{{ 'is-active' if tab == key else '' }}" href="{{ url_for('mobile_app_preview', platform=platform, tab=key) }}"><span>{{ icon }}</span>{{ label }}</a>{% endfor %}
+        </nav>
+      </div>
+    </div>
+    <aside class="mobile-demo-details">
+      <span class="eyebrow">Attendance demo</span><h2>Check in either way</h2><p>Members can present a short-lived pass for staff to scan, or scan the organization’s rotating code from a signed-in Socio account. Successful check-ins appear in the organization’s attendance log.</p>
+      {% if g.user and g.user.role == 'organization_admin' and has_admin_permission('members') and g.user.organization.status == 'Approved' %}
+        <a class="button" href="{{ url_for('organization_attendance') }}">Open {{ g.user.organization.name }} check-in desk <span aria-hidden="true">→</span></a>
+      {% elif member and memberships %}
+        <a class="button" href="{{ url_for('member_qr_card', membership_id=memberships[0].id) }}">Open your first member pass <span aria-hidden="true">→</span></a>
+      {% else %}
+        <a class="button" href="{{ url_for('sign_in') }}">Sign in to try your real QR flow <span aria-hidden="true">→</span></a>
+      {% endif %}
+      <div class="mobile-demo-step"><span>01</span><div><strong>Member presents pass</strong><p>Club staff scans it, checks member and tier details, then confirms attendance.</p></div></div>
+      <div class="mobile-demo-step"><span>02</span><div><strong>Member scans club code</strong><p>Member signs in, scans the club QR with the phone camera, and confirms their own check-in.</p></div></div>
+      <div class="mobile-demo-step"><span>03</span><div><strong>Attendance is recorded</strong><p>The organization sees the check-in time and method in its attendance log.</p></div></div>
+      <p class="field-hint">The phone screen is a clickable concept. The actual one-time QR flows run in this local web demo. Native Android and iOS apps remain planned work.</p>
+    </aside>
+  </div>
+</section>
+{% endblock %}

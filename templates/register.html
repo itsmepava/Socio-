@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Register your organization{% endblock %}
+{% block content %}
+  <section class="auth-layout">
+    <aside class="auth-aside">
+      <div>
+        <span class="eyebrow">For organizations</span>
+        <h1 class="auth-title">Bring your membership programme together.</h1>
+        <p class="auth-description">Create a workspace for your organization. Once approved, you can add existing members, set up club tiers, and keep your community connected.</p>
+      </div>
+      <div class="auth-aside-bottom">A clear first step for your community.</div>
+    </aside>
+    <div class="auth-main">
+      <div class="auth-form-wrap">
+        <h2 class="auth-heading">Register your organization</h2>
+        <p class="auth-lede">Tell us a little about your organization and its administrator.</p>
+        <div class="notice"><span class="notice-icon" aria-hidden="true">i</span><span>Your registration will be reviewed. You can sign in and manage plans after it has been approved.</span></div>
+        <form method="post" class="form-stack" autocomplete="on">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="field"><label for="name">Organization name</label><input id="name" name="name" maxlength="120" autocomplete="organization" placeholder="e.g. Colombo Community Society" required></div>
+          <div class="field"><label for="organization_email">Organization contact email</label><input id="organization_email" name="organization_email" type="email" maxlength="254" autocomplete="email" placeholder="hello@yourorganization.org" required></div>
+          <div class="field"><label for="admin_name">Your full name</label><input id="admin_name" name="admin_name" maxlength="120" autocomplete="name" required></div>
+          <div class="field"><label for="gender">Gender <span class="field-hint">Optional</span></label><select id="gender" name="gender"><option value="">Prefer not to provide</option><option>Woman</option><option>Man</option><option>Non-binary</option><option>Prefer not to say</option><option>Other</option></select></div>
+          <div class="field"><label for="email">Administrator sign-in email</label><input id="email" name="email" type="email" maxlength="254" autocomplete="username" placeholder="you@example.com" required></div>
+          <div class="field"><label for="password">Create a password <span class="field-hint">12 to 128 characters</span></label><input id="password" name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
+          <div class="field"><label for="password_confirmation">Confirm password</label><input id="password_confirmation" name="password_confirmation" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
+          <button class="button form-submit" type="submit">Submit for review <span aria-hidden="true">→</span></button>
+        </form>
+        <p class="form-footnote">Already registered? <a href="{{ url_for('login') }}">Sign in</a></p>
+      </div>
+    </div>
+  </section>
+{% endblock %}

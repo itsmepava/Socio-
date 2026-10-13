@@ -1,0 +1,5 @@
+{% extends 'base.html' %}
+{% block title %}QR code expired{% endblock %}
+{% block content %}
+  <section class="panel checkin-state-panel"><span class="eyebrow">Socio check-in</span><h1 class="page-heading">This QR code has expired</h1><p class="page-intro">Ask the member to refresh their pass, or ask the organization team to display a new club check-in code.</p><a class="button button-quiet" href="{{ url_for('index') }}">Return to Socio</a></section>
+{% endblock %}

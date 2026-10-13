@@ -1,0 +1,5 @@
+{% extends 'base.html' %}
+{% block title %}Member invitations{% endblock %}
+{% block content %}
+  <section class="home-section"><span class="eyebrow">{{ organization.name }}</span><h1 class="page-heading">Member invitations processed</h1><p class="page-intro">Each member was added to the club roster and invited by email to activate their Socio account and complete the onboarding form.</p><div class="panel home-section"><div class="table-wrap"><table><thead><tr><th>Member</th><th>Email</th><th>Club plan</th><th>Invitation</th></tr></thead><tbody>{% for item in invite_links %}<tr><td>{{ item.name }}</td><td>{{ item.email }}</td><td>{{ item.plan }}</td><td><span class="status-badge status-approved">{{ 'Email sent' if item.sent else 'Preview logged locally' }}</span></td></tr>{% endfor %}</tbody></table></div></div><a class="button" href="{{ url_for('organization_members') }}">Open member directory</a></section>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Welcome{% endblock %}
+{% block content %}
+  <section class="hero welcome-hero">
+    <div class="hero-grid">
+      <div class="hero-copy">
+        <span class="eyebrow">Your Socio home</span>
+        <h1 class="hero-title">Welcome, <em>{{ display_name(g.user).split(' ')[0] }}.</em></h1>
+        {% if g.user.role == 'platform_admin' %}
+          <p class="hero-description">Keep Socio’s member communities running smoothly. Review organization registrations, oversee platform activity, and manage your team’s access from one workspace.</p>
+          <a class="button" href="{{ url_for('admin_organizations') }}">Open platform workspace →</a>
+        {% elif g.user.role == 'organization_admin' %}
+          <p class="hero-description">Welcome to {{ g.user.organization.name }}. Add members who have already joined your club, collect their onboarding details, and keep everyone informed.</p>
+          <a class="button" href="{{ url_for('organization_plans') }}">Open organization workspace →</a>
+        {% elif membership %}
+          <p class="hero-description">Good to have you back. You have {{ memberships|length }} club membership{{ '' if memberships|length == 1 else 's' }} in Socio. Your club updates and member offers are waiting.</p>
+          <a class="button" href="{{ url_for('member_directory') }}">Open my clubs →</a><a class="button button-quiet" href="{{ url_for('member_notifications') }}">View club updates{% if unread_notification_count %} · {{ unread_notification_count }} new{% endif %}</a>
+        {% else %}
+          <p class="hero-description">Your member space is ready. When an organization adds you to its roster, you’ll receive a secure email invitation to finish setting up your access.</p>
+          <a class="button" href="{{ url_for('member_register') }}">How to get member access →</a>
+        {% endif %}
+      </div>
+      <aside class="preview-card welcome-card"><div class="preview-top"><span class="preview-brand">socio<span class="brand-period">.</span></span><span class="preview-label">{{ g.user.admin_title or (g.user.role|replace('_', ' ')|upper) }}</span></div><div class="preview-stat"><small>{% if g.user.role == 'organization_admin' and has_admin_permission('team') %}{{ g.user.organization.name }} Main Dashboard{% elif g.user.role == 'organization_admin' %}{{ g.user.organization.name }} · {{ g.user.admin_title or 'Staff' }} Workspace{% else %}Your Socio workspace{% endif %}</small><strong>{{ display_name(g.user) }}</strong></div><p class="section-copy">{% if g.user.role == 'member' %}Your clubs, events, offers, and member updates in one place.{% elif g.user.role == 'organization_admin' %}Manage your existing members, invite them into Socio, and keep your club community informed.{% else %}A secure operations space for the people who keep Socio running.{% endif %}</p></aside>
+    </div>
+  </section>
+{% endblock %}

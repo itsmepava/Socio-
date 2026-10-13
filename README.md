@@ -2,7 +2,7 @@
 
 Socio helps clubs and other member organizations manage the people who have already joined them. An organization records a member and sends a secure invitation; the member activates their account, completes their profile, consent, and any club onboarding form, then sees all their Socio clubs and receives club updates in one place.
 
-This is the first alpha for the fresh Socio repository. It is a locally hosted web demo for team testing. The intended service has a GCP-hosted backend and organization web workspaces for managing rosters, staff roles, attendance, events, and offers. Members will use native Android and iOS apps for their clubs, notifications, and digital passes, distributed through Google Play and Apple’s App Store. Those deployment and mobile apps are future stages, not included in this alpha. Payments are not processed by Socio.
+This is an early alpha for the fresh Socio repository. It is a locally hosted web demo for team testing. The intended service has a GCP-hosted backend and organization web workspaces for managing rosters, staff roles, attendance, events, and offers. Members will use native Android and iOS apps for their clubs, notifications, and digital passes, distributed through Google Play and Apple’s App Store. Those deployment and mobile apps are future stages, not included in this alpha. All checkout flows are simulations; Socio does not process real payments.
 
 ## What this alpha includes
 
@@ -16,18 +16,22 @@ This is the first alpha for the fresh Socio repository. It is a locally hosted w
 - Member search for organization staff, with onboarding responses visible to authorized staff.
 - Member requests to change membership tier, with organization review and an in-app decision notice.
 - Member controls to request a membership upgrade or tier change and schedule or undo cancellation.
+- Club-specific membership tier badges in the member gallery, with the organization’s highest priced tier marked as its top tier.
+- A member billing area with membership payment history and photo-based bill or expense proof submissions for organization review. Proof acceptance is record review only; it does not verify or reimburse a payment.
+- A simulated upgrade checkout with sample card fields. Card data stays in the browser and is not sent to or stored by Socio.
+- Member profile editing for display name, optional phone and gender details, and a resized profile picture.
 - Digital membership QR passes for staff-verified check-in, plus rotating organization QR codes for member self check-in.
 - Attendance history scoped to each organization; QR passes are short-lived and single-use.
 - A clickable Android/iPhone-style member app concept with clubs, updates, passes, and profile screens. Signed-in members see their own memberships and notifications; signed-out visitors see clearly labeled sample content.
 - In-app notification inbox plus optional email delivery for club updates.
 - Events, posters, and offers that members can open for full details.
 - SMTP email delivery when configured; local email preview is available for development.
-- Simulated payments are not part of the member experience; club admission and fees happen through the organization.
+- Existing club admission and offline fees remain managed by the organization; only tier upgrades use the demo simulated checkout. No money is collected.
 
 ## Run locally on Windows
 
 1. Install Python 3.12.
-2. Extract this ZIP to a short folder path, for example `C:\Socio\alpha1`. Avoid deeply nested paths on Windows.
+2. Extract this ZIP to a short folder path, for example `C:\Socio\alpha2`. Avoid deeply nested paths on Windows.
 3. Open PowerShell in the extracted folder.
 4. Run `python -m venv .venv`.
 5. Run `Set-ExecutionPolicy -Scope Process Bypass` if PowerShell blocks the setup script.

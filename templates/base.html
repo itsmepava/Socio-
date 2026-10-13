@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f5f2">
+  <title>{% block title %}Socio{% endblock %} · Socio</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='site.css', v='alpha1-mobile3') }}">
+  <script src="{{ url_for('static', filename='theme.js') }}" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="{{ url_for('index') }}" aria-label="Socio home">
+        <img class="brand-logo" src="{{ url_for('static', filename='socio-logo-light.png') }}" alt="Socio">
+      </a>
+      <nav class="top-nav" aria-label="Main navigation">
+        {% if g.user %}
+          {% if g.user.role == 'platform_admin' %}
+            <a href="{{ url_for('admin_organizations') }}">Platform admin</a>
+            {% if has_admin_permission('team') %}<a href="{{ url_for('platform_team') }}">Team</a><a href="{{ url_for('admin_email_setup') }}">Email setup</a>{% endif %}
+            <a href="{{ url_for('welcome') }}">Home</a>
+          {% elif g.user.role == 'organization_admin' %}
+            <a href="{{ url_for('organization_plans') }}" title="{{ g.user.organization.name }}{% if has_admin_permission('team') %} Main Dashboard{% else %} · {{ g.user.admin_title or 'Staff Workspace' }}{% endif %}">Dashboard</a>
+            {% if has_admin_permission('members') %}<a href="{{ url_for('organization_members') }}">Members & updates</a><a href="{{ url_for('organization_forms') }}">Onboarding form</a><a href="{{ url_for('organization_attendance') }}">Check-in & attendance</a>{% endif %}
+            {% if has_admin_permission('team') %}<a href="{{ url_for('organization_team') }}">Team access</a>{% endif %}
+            {% if g.user.organization.status == 'Approved' %}<a href="{{ url_for('public_organization', organization_id=g.user.organization_id) }}">Member preview</a>{% endif %}
+          {% else %}
+            <a href="{{ url_for('member_home') }}">My clubs</a>
+            <a href="{{ url_for('member_notifications') }}">Club updates{% if unread_notification_count %} ({{ unread_notification_count }}){% endif %}</a>
+          {% endif %}
+          {% if g.user.role == 'member' %}<a class="user-chip user-profile-link" href="{{ url_for('member_profile') }}" title="Edit your profile"><span class="avatar-dot">{% if g.user.profile_image %}<img src="{{ url_for('member_profile_picture') }}" alt="">{% else %}{{ display_name(g.user)[0]|upper }}{% endif %}</span><span class="user-name">{{ display_name(g.user) }}</span><span class="role-label">My profile</span></a>{% else %}<span class="user-chip" title="{{ g.user.email }}"><span class="avatar-dot">{{ display_name(g.user)[0]|upper }}</span><span class="user-name">{{ display_name(g.user) }}</span><span class="role-label">{{ g.user.admin_title or (g.user.role|replace('_', ' ')) }}</span></span>{% endif %}
+          <form method="post" action="{{ url_for('logout') }}" class="nav-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="button button-quiet button-small" type="submit">Sign out</button>
+          </form>
+        {% else %}
+          <a class="button button-quiet button-small" href="{{ url_for('sign_in') }}">Sign in</a>
+        {% endif %}
+      </nav>
+      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark mode" title="Switch to dark mode"><span class="theme-icon" aria-hidden="true">☾</span><span class="theme-label">Dark mode</span></button>
+    </div>
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <section class="flash-stack" aria-live="polite" aria-label="Notifications">
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}"><span class="flash-icon" aria-hidden="true">{{ '✓' if category == 'success' else '!' }}</span><span>{{ message }}</span></div>
+        {% endfor %}
+      </section>
+    {% endif %}
+  {% endwith %}
+
+  <main id="main-content" class="page-shell">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner"><span class="footer-brand"><img class="footer-logo" src="{{ url_for('static', filename='socio-logo-light.png') }}" alt="Socio"></span><span class="footer-links"><a href="{{ url_for('about') }}">About Socio</a><span><i class="status-light"></i> Your organization manages your membership</span></span></div>
+  </footer>
+</body>
+</html>

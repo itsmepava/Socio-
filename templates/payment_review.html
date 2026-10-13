@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Review payment{% endblock %}
+{% block content %}
+  <section class="bank-shell">
+    <div class="bank-banner"><span class="bank-symbol" aria-hidden="true">✓</span><div><strong>REVIEW BEFORE CONTINUING</strong><span>Check the membership details and simulated amount.</span></div><span class="simulated-pill">NO REAL PAYMENT</span></div>
+    <div class="bank-content">
+      <span class="eyebrow">Membership checkout · Payment #{{ payment.id }}</span>
+      <h1 class="page-heading">Review your membership</h1>
+      <p class="page-intro">The amount and plan below were calculated by Socio. You can confirm the details before opening the simulated payment page.</p>
+      <div class="bank-amount"><span>Amount due · LKR</span><strong>LKR {{ '{:,.2f}'.format(payment.amount_minor / 100) }}</strong></div>
+      <dl class="bank-details">
+        <div><dt>Organization</dt><dd>{{ payment.organization.name }}</dd></div>
+        <div><dt>Plan</dt><dd>{{ payment.plan.name }}</dd></div>
+        <div><dt>Payment type</dt><dd>{{ payment.kind|capitalize }}</dd></div>
+        <div><dt>Billing period</dt><dd>{{ payment.plan.billing_period|capitalize }}</dd></div>
+        <div><dt>Expected start</dt><dd>{{ starts_when }}</dd></div>
+        <div><dt>Expected end</dt><dd>{{ ending }}</dd></div>
+      </dl>
+      <div class="notice home-section"><span class="notice-icon" aria-hidden="true">i</span><span>You can cancel at any time. Access remains available through the end of the paid period. Dates are shown on the local simulated clock.</span></div>
+      <form method="post" class="form-stack home-section">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="confirm-reset"><input type="checkbox" name="confirm_terms" value="yes" required><span>I reviewed the plan and understand this payment is simulated. No real money will be taken.</span></label>
+        <button class="button" type="submit">Continue to simulated payment →</button>
+      </form>
+      <a class="bank-back-link" href="{{ url_for('member_home', selected_membership_id=membership.id) }}">← Back to my membership</a>
+    </div>
+  </section>
+{% endblock %}

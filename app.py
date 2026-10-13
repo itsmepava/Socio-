@@ -12,8 +12,10 @@ import smtplib
 from html import escape
 from email.message import EmailMessage
 from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal, InvalidOperation
 from functools import wraps
 import json
+import re
 from urllib.parse import urlsplit
 
 import click
@@ -149,6 +151,8 @@ class User(db.Model):
     email = db.Column(db.String(254), nullable=False, index=True)
     full_name = db.Column(db.String(120), nullable=True)
     gender = db.Column(db.String(40), nullable=True)
+    phone_number = db.Column(db.String(32), nullable=True)
+    profile_image = db.Column(db.LargeBinary, nullable=True)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(24), nullable=False)
     organization_id = db.Column(db.Integer, db.ForeignKey("organization.id"), nullable=True, index=True)
@@ -287,6 +291,34 @@ class SimulatedPayment(db.Model):
     membership = db.relationship("Membership", back_populates="payments")
     plan = db.relationship("Plan")
     refund_request = db.relationship("SimulatedRefund", back_populates="payment", uselist=False)
+
+
+class MemberBillingProof(db.Model):
+    """Member-submitted proof of a club payment or expense for organization review."""
+    id = db.Column(db.Integer, primary_key=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey("organization.id"), nullable=False, index=True)
+    membership_id = db.Column(db.Integer, db.ForeignKey("membership.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    record_type = db.Column(db.String(24), nullable=False)
+    description = db.Column(db.String(160), nullable=False)
+    amount_minor = db.Column(db.Integer, nullable=False)
+    expense_date = db.Column(db.Date, nullable=False)
+    member_note = db.Column(db.String(500), nullable=False, default="")
+    evidence_png = db.Column(db.LargeBinary, nullable=False)
+    status = db.Column(db.String(16), nullable=False, default="Submitted")
+    organization_note = db.Column(db.String(500), nullable=False, default="")
+    reviewed_by_user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    submitted_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    reviewed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    __table_args__ = (
+        CheckConstraint("record_type in ('Membership fee','Club expense','Other')"),
+        CheckConstraint("amount_minor > 0"),
+        CheckConstraint("status in ('Submitted','Accepted','Declined')"),
+    )
+    organization = db.relationship("Organization")
+    membership = db.relationship("Membership")
+    user = db.relationship("User", foreign_keys=[user_id])
+    reviewed_by = db.relationship("User", foreign_keys=[reviewed_by_user_id])
 
 
 class SimulationState(db.Model):
@@ -587,6 +619,10 @@ def ensure_local_sqlite_schema() -> None:
             connection.execute(text("ALTER TABLE user ADD COLUMN full_name VARCHAR(120)"))
         if "gender" not in user_columns:
             connection.execute(text("ALTER TABLE user ADD COLUMN gender VARCHAR(40)"))
+        if "phone_number" not in user_columns:
+            connection.execute(text("ALTER TABLE user ADD COLUMN phone_number VARCHAR(32)"))
+        if "profile_image" not in user_columns:
+            connection.execute(text("ALTER TABLE user ADD COLUMN profile_image BLOB"))
         if "email_verified" not in user_columns:
             # Existing local demo accounts predate confirmation and remain usable.
             connection.execute(text("ALTER TABLE user ADD COLUMN email_verified BOOLEAN NOT NULL DEFAULT 1"))
@@ -611,6 +647,8 @@ def ensure_local_sqlite_schema() -> None:
                 email VARCHAR(254) NOT NULL,
                 full_name VARCHAR(120),
                 gender VARCHAR(40),
+                phone_number VARCHAR(32),
+                profile_image BLOB,
                 password_hash VARCHAR(255) NOT NULL,
                 role VARCHAR(24) NOT NULL,
                 organization_id INTEGER REFERENCES organization(id),
@@ -626,9 +664,9 @@ def ensure_local_sqlite_schema() -> None:
                     (role = 'organization_admin' and organization_id is not null) or role = 'member')
             )""")
             cursor.execute("""INSERT INTO user_new
-                (id,email,full_name,gender,password_hash,role,organization_id,active,email_verified,
+                (id,email,full_name,gender,phone_number,profile_image,password_hash,role,organization_id,active,email_verified,
                  admin_permissions,admin_title,session_nonce,created_at)
-                SELECT id,email,full_name,gender,password_hash,role,organization_id,active,email_verified,
+                SELECT id,email,full_name,gender,phone_number,profile_image,password_hash,role,organization_id,active,email_verified,
                        admin_permissions,admin_title,session_nonce,created_at FROM user""")
             cursor.execute("DROP TABLE user")
             cursor.execute("ALTER TABLE user_new RENAME TO user")
@@ -798,6 +836,7 @@ ADMIN_ENDPOINT_PERMISSIONS = {
     "organization_attendance": "members",
     "organization_add_member": "members",
     "organization_review_member_plan_change": "members",
+    "organization_review_billing_proof": "members",
     "organization_record_offline_payment": "finance",
     "archive_plan": "plans",
     "organization_create_offer": "offers",
@@ -1193,6 +1232,65 @@ def create_app(test_config: dict | None = None) -> Flask:
     def about():
         return render_template("about.html")
 
+    @app.route("/member/profile", methods=["GET", "POST"])
+    @role_required("member")
+    @limiter.limit("10 per hour", methods=["POST"])
+    def member_profile():
+        user = g.user
+        if request.method == "POST":
+            full_name = request.form.get("full_name", "").strip()
+            gender = request.form.get("gender", "").strip()
+            phone_number = request.form.get("phone_number", "").strip()
+            allowed_genders = {"", "Woman", "Man", "Non-binary", "Prefer not to say", "Other"}
+            photo = request.files.get("profile_image")
+            remove_photo = request.form.get("remove_profile_image") == "yes"
+            normalized_photo = None
+            errors = []
+            if not full_name or len(full_name) > 120:
+                errors.append("Enter a name up to 120 characters.")
+            if gender not in allowed_genders:
+                errors.append("Choose one of the listed profile options.")
+            if len(phone_number) > 32 or (phone_number and not re.fullmatch(r"[+0-9() .-]{7,32}", phone_number)):
+                errors.append("Enter a valid phone number, or leave it blank.")
+            if photo and photo.filename:
+                raw_photo = photo.stream.read(3 * 1024 * 1024 + 1)
+                if len(raw_photo) > 3 * 1024 * 1024:
+                    errors.append("The profile picture must be 3 MB or smaller.")
+                else:
+                    try:
+                        normalized_photo = normalize_uploaded_image(raw_photo, max_side=512,
+                                                                    max_output_bytes=700 * 1024)
+                    except (UnidentifiedImageError, OSError, ValueError):
+                        errors.append("Choose a valid PNG, JPEG, or WebP picture under 20 megapixels.")
+            if errors:
+                for message in errors:
+                    flash(message, "error")
+            else:
+                user.full_name = full_name
+                user.gender = gender or None
+                user.phone_number = phone_number or None
+                if normalized_photo:
+                    user.profile_image = normalized_photo
+                elif remove_photo:
+                    user.profile_image = None
+                record_activity("member_profile_updated", "user", user.id,
+                                "Profile details or picture updated by the member")
+                db.session.commit()
+                flash("Your profile was updated.", "success")
+                return redirect(url_for("member_profile"))
+        return render_template("member_profile.html", user=user)
+
+    @app.get("/member/profile/picture")
+    @role_required("member")
+    def member_profile_picture():
+        if not g.user.profile_image:
+            abort(404)
+        response = Response(g.user.profile_image, mimetype="image/png")
+        response.headers["Cache-Control"] = "private, no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Content-Disposition"] = "inline; filename=socio-profile.png"
+        return response
+
     @app.get("/healthz")
     def health_check():
         try:
@@ -1383,6 +1481,17 @@ def create_app(test_config: dict | None = None) -> Flask:
         for organization_id in organization_ids:
             plans_by_org[organization_id] = Plan.query.filter_by(
                 organization_id=organization_id, archived=False).order_by(Plan.name).all()
+        highest_plan_id_by_org = {
+            organization_id: max(plans, key=lambda plan: plan.price_minor).id
+            for organization_id, plans in plans_by_org.items() if plans
+        }
+        pending_upgrade_by_membership = {
+            payment.membership_id: payment
+            for payment in SimulatedPayment.query.join(
+                Membership, SimulatedPayment.membership_id == Membership.id
+            ).filter(Membership.user_id == g.user.id, SimulatedPayment.status == "Pending",
+                     SimulatedPayment.kind == "upgrade").order_by(SimulatedPayment.id.desc()).all()
+        }
         latest_plan_change_by_membership = {}
         for change in MemberPlanChange.query.filter_by(user_id=g.user.id).order_by(
                 MemberPlanChange.requested_at.desc()).all():
@@ -1391,7 +1500,96 @@ def create_app(test_config: dict | None = None) -> Flask:
                                membership_by_org=membership_by_org, offers_by_org=offers_by_org,
                                events_by_org=events_by_org, plans_by_org=plans_by_org,
                                plan_change_by_membership=latest_plan_change_by_membership,
+                               highest_plan_id_by_org=highest_plan_id_by_org,
+                               pending_upgrade_by_membership=pending_upgrade_by_membership,
                                search=search)
+
+    @app.route("/member/memberships/<int:membership_id>/billing", methods=["GET", "POST"])
+    @role_required("member")
+    @limiter.limit("12 per hour", methods=["POST"])
+    def member_billing(membership_id: int):
+        membership = Membership.query.filter_by(id=membership_id, user_id=g.user.id).first_or_404()
+        proofs = MemberBillingProof.query.filter_by(membership_id=membership.id).order_by(
+            MemberBillingProof.submitted_at.desc()).all()
+        if request.method == "POST":
+            record_type = request.form.get("record_type", "")
+            description = request.form.get("description", "").strip()
+            expense_date_raw = request.form.get("expense_date", "")
+            member_note = request.form.get("member_note", "").strip()
+            upload = request.files.get("evidence")
+            try:
+                amount = Decimal(request.form.get("amount", "").strip())
+                if not amount.is_finite() or amount <= 0 or amount > Decimal("999999999.99"):
+                    raise InvalidOperation
+                amount_minor = int(amount.quantize(Decimal("0.01")) * 100)
+            except (InvalidOperation, ValueError, OverflowError):
+                amount_minor = 0
+            try:
+                expense_date = date.fromisoformat(expense_date_raw)
+            except (ValueError, TypeError):
+                expense_date = None
+            errors = []
+            if record_type not in ("Membership fee", "Club expense", "Other"):
+                errors.append("Choose a valid record type.")
+            if not description or len(description) > 160:
+                errors.append("Add a short description up to 160 characters.")
+            if amount_minor <= 0 or amount_minor > 99_999_999_999:
+                errors.append("Enter a valid LKR amount greater than zero.")
+            if not expense_date or expense_date > utcnow().date():
+                errors.append("Choose a valid date that is not in the future.")
+            if len(member_note) > 500:
+                errors.append("Your note can be up to 500 characters.")
+            evidence_png = None
+            if not upload or not upload.filename:
+                errors.append("Add a photo of the bill or receipt.")
+            else:
+                raw_evidence = upload.stream.read(3 * 1024 * 1024 + 1)
+                if len(raw_evidence) > 3 * 1024 * 1024:
+                    errors.append("The receipt photo must be 3 MB or smaller.")
+                else:
+                    try:
+                        evidence_png = normalize_uploaded_image(raw_evidence, max_side=2200,
+                                                                max_output_bytes=1200 * 1024)
+                    except (UnidentifiedImageError, OSError, ValueError):
+                        errors.append("Use a valid PNG, JPEG, or WebP receipt photo under 20 megapixels.")
+            if errors:
+                for message in errors:
+                    flash(message, "error")
+            else:
+                proof = MemberBillingProof(organization_id=membership.organization_id,
+                    membership_id=membership.id, user_id=g.user.id, record_type=record_type,
+                    description=description, amount_minor=amount_minor, expense_date=expense_date,
+                    member_note=member_note, evidence_png=evidence_png)
+                db.session.add(proof)
+                db.session.flush()
+                record_activity("member_billing_proof_submitted", "billing_proof", proof.id,
+                    f"{record_type}; LKR {amount_minor / 100:.2f}; {membership.organization.name}")
+                db.session.commit()
+                flash("Your bill or expense proof was submitted to the organization for review. Socio does not process or reimburse this payment.", "success")
+                return redirect(url_for("member_billing", membership_id=membership.id))
+        payments = SimulatedPayment.query.filter_by(membership_id=membership.id).order_by(
+            SimulatedPayment.created_at.desc()).limit(100).all()
+        return render_template("member_billing.html", membership=membership, proofs=proofs,
+                               payments=payments,
+                               today=utcnow().date().isoformat())
+
+    @app.get("/billing-proof/<int:proof_id>/evidence")
+    @login_required
+    def member_billing_evidence(proof_id: int):
+        proof = db.session.get(MemberBillingProof, proof_id)
+        if not proof:
+            abort(404)
+        member_can_view = g.user.role == "member" and proof.user_id == g.user.id
+        organization_can_view = (g.user.role == "organization_admin"
+            and g.user.organization_id == proof.organization_id
+            and has_admin_permission(g.user, "members"))
+        if not (member_can_view or organization_can_view):
+            abort(404)
+        response = Response(proof.evidence_png, mimetype="image/png")
+        response.headers["Cache-Control"] = "private, no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Content-Disposition"] = "inline; filename=socio-bill-proof.png"
+        return response
 
     @app.get("/member/memberships/<int:membership_id>/card")
     @role_required("member")
@@ -1517,12 +1715,17 @@ def create_app(test_config: dict | None = None) -> Flask:
             target_plan_id = 0
         target_plan = Plan.query.filter_by(id=target_plan_id,
             organization_id=membership.organization_id, archived=False).first()
+        if target_plan and target_plan.billing_period != membership.plan.billing_period:
+            flash("Choose a tier with the same billing period. Contact your club if you want to change billing frequency.", "error")
+            return redirect(url_for("member_directory"))
         pending = MemberPlanChange.query.filter_by(membership_id=membership.id,
             status="Requested").first()
         if not target_plan or target_plan.id == membership.plan_id:
             flash("Choose a different available membership tier.", "error")
         elif pending:
             flash("You already have a tier-change request awaiting the organization’s review.", "error")
+        elif membership.next_plan_id:
+            flash("Undo your scheduled tier change before requesting another one.", "error")
         else:
             note = request.form.get("member_note", "").strip()[:500]
             change = MemberPlanChange(organization_id=membership.organization_id,
@@ -1533,7 +1736,7 @@ def create_app(test_config: dict | None = None) -> Flask:
             record_activity("member_tier_change_requested", "membership", membership.id,
                             f"{membership.plan.name} to {target_plan.name}")
             db.session.commit()
-            flash("Your request was sent to the organization. Any eligibility checks or fees are handled by the club.", "success")
+            flash("Your request was sent to the organization. If an upgrade is approved, you’ll review a simulated prorated payment in Socio.", "success")
         return redirect(url_for("member_directory"))
 
     @app.route("/organizations/register", methods=["GET", "POST"])
@@ -2246,10 +2449,44 @@ def create_app(test_config: dict | None = None) -> Flask:
                 responses_by_membership[membership.id] = []
         plan_changes = MemberPlanChange.query.filter_by(organization_id=organization.id,
             status="Requested").order_by(MemberPlanChange.requested_at.asc()).all()
+        billing_proofs = MemberBillingProof.query.filter_by(organization_id=organization.id).order_by(
+            MemberBillingProof.submitted_at.desc()).limit(200).all()
         return render_template("organization_members.html", organization=organization,
                                memberships=memberships, plans=plans, search=search,
                                responses_by_membership=responses_by_membership,
-                               plan_changes=plan_changes)
+                               plan_changes=plan_changes, billing_proofs=billing_proofs)
+
+    @app.post("/organization/billing-proofs/<int:proof_id>/<action>")
+    @role_required("organization_admin")
+    def organization_review_billing_proof(proof_id: int, action: str):
+        if action not in ("accept", "decline"):
+            abort(404)
+        proof = MemberBillingProof.query.filter_by(
+            id=proof_id, organization_id=g.user.organization_id).first_or_404()
+        if proof.status != "Submitted":
+            flash("This bill or expense proof has already been reviewed.", "error")
+            return redirect(url_for("organization_members"))
+        note = request.form.get("organization_note", "").strip()
+        if len(note) > 500:
+            flash("The review note can be up to 500 characters.", "error")
+            return redirect(url_for("organization_members"))
+        proof.status = "Accepted" if action == "accept" else "Declined"
+        proof.organization_note = note
+        proof.reviewed_by_user_id = g.user.id
+        proof.reviewed_at = utcnow()
+        message = (f"{proof.organization.name} reviewed your {proof.record_type.lower()} proof "
+                   f"for LKR {proof.amount_minor / 100:,.2f}: {proof.status.lower()}.")
+        if note:
+            message += f" Note: {note}"
+        message += " This review does not move or reimburse money."
+        db.session.add(MemberNotification(organization_id=proof.organization_id,
+            user_id=proof.user_id, created_by_user_id=g.user.id,
+            title="Bill or expense proof reviewed", body=message))
+        record_activity(f"member_billing_proof_{action}d", "billing_proof", proof.id,
+                        f"{proof.record_type}; LKR {proof.amount_minor / 100:.2f}")
+        db.session.commit()
+        flash("Proof review saved. Socio has not transferred or reimbursed money.", "success")
+        return redirect(url_for("organization_members"))
 
     @app.get("/organization/attendance")
     @role_required("organization_admin")
@@ -2289,14 +2526,41 @@ def create_app(test_config: dict | None = None) -> Flask:
         change.organization_note = note
         change.reviewed_at = utcnow()
         change.reviewed_by_user_id = g.user.id
+        payment = None
         if action == "approve":
             target = Plan.query.filter_by(id=change.to_plan_id,
                 organization_id=change.organization_id, archived=False).first()
             if not target:
                 abort(409)
-            change.membership.plan_id = target.id
+            current = change.membership.plan
+            if target.billing_period != current.billing_period:
+                db.session.rollback()
+                flash("The billing period must stay the same for this tier change. Ask the member to submit a request using a matching billing period.", "error")
+                return redirect(url_for("organization_members"))
+            if target.price_minor > current.price_minor:
+                pending = SimulatedPayment.query.filter_by(
+                    membership_id=change.membership_id, status="Pending").first()
+                if pending and (pending.kind != "upgrade" or pending.plan_id != target.id):
+                    db.session.rollback()
+                    flash("Resolve the member’s existing pending payment before approving this upgrade.", "error")
+                    return redirect(url_for("organization_members"))
+                days_left = max(0, (change.membership.end_day or simulated_day()) - simulated_day())
+                amount = round((target.price_minor - current.price_minor) * days_left /
+                               period_days(current))
+                payment = create_simulated_payment(change.membership, target, "upgrade", amount)
+                message_suffix = (f" Your simulated prorated payment of LKR {payment.amount_minor / 100:,.2f} "
+                                  "is ready in Socio. No money will be collected.")
+            elif target.price_minor < current.price_minor:
+                change.membership.next_plan_id = target.id
+                message_suffix = " The lower tier is scheduled to start after your current paid period."
+            else:
+                change.membership.plan_id = target.id
+                message_suffix = " The tier has been updated."
+        else:
+            message_suffix = ""
         message = (f"Your request to change from {change.from_plan.name} to {change.to_plan.name} "
                    f"was {change.status.lower()} by {change.organization.name}.")
+        message += message_suffix
         if note:
             message += f" Organization note: {note}"
         db.session.add(MemberNotification(organization_id=change.organization_id,

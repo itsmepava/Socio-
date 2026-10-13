@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}About Socio{% endblock %}
+{% block content %}
+  <section class="hero about-hero">
+    <img class="about-brand-logo" src="{{ url_for('static', filename='socio-logo-light.png') }}" alt="Socio logo">
+    <div class="hero-copy">
+      <span class="eyebrow">The clubs you belong to, connected</span>
+      <h1 class="hero-title">Membership should feel <em>joined up.</em></h1>
+      <p class="hero-description">Socio gives organizations one place to manage their existing members and gives each member a home for all their clubs, events, offers, and updates.</p>
+      <div class="hero-actions"><a class="button" href="{{ url_for('register_organization') }}">Set up an organization portal <span aria-hidden="true">→</span></a><a class="button button-quiet" href="{{ url_for('member_sign_in') }}">Member sign in</a></div>
+    </div>
+  </section>
+
+  <section class="home-section" aria-labelledby="about-how-title">
+    <div class="section-topline"><div><span class="eyebrow">One shared membership home</span><h2 class="section-heading" id="about-how-title">How Socio works</h2><p class="section-copy">A clear path for members, organizations, and the team supporting them.</p></div></div>
+    <div class="feature-grid">
+      <article class="feature-card"><span class="eyebrow">Member portal</span><h3>Your clubs together</h3><p>Activate through an organization invitation, complete your profile and club form, then keep up with all your Socio-connected clubs.</p><a class="button-text" href="{{ url_for('member_register') }}">How member access works →</a></article>
+      <article class="feature-card"><span class="eyebrow">Organization portal</span><h3>Manage your member community</h3><p>Add existing members, collect onboarding details, assign staff roles, and share targeted or club-wide updates.</p><a class="button-text" href="{{ url_for('register_organization') }}">Create organization portal →</a></article>
+      <article class="feature-card"><span class="eyebrow">Platform portal</span><h3>Support a trusted network</h3><p>Review organization registrations and use scoped team access for platform operations.</p></article>
+    </div>
+  </section>
+
+  <section class="panel about-note" aria-labelledby="mobile-roadmap-title">
+    <div class="panel-head"><div><span class="eyebrow">Product roadmap</span><h2 class="section-heading" id="mobile-roadmap-title">The right workspace for every role</h2><p class="section-copy">Organizations will manage rosters, staff roles, attendance, events, and offers through a full web workspace. Members will have the convenience of native Android and iOS apps for their clubs, notifications, and digital passes. The service is planned for Google Cloud Platform.</p></div></div>
+    <p class="field-hint">The mobile apps will be built after the core workflows are validated. This demo does not yet include store-ready mobile applications or a GCP production deployment.</p>
+    <a class="button" href="{{ url_for('mobile_app_preview', platform='android') }}">Preview the mobile app concept <span aria-hidden="true">→</span></a>
+  </section>
+
+  <section class="panel about-note"><div class="panel-head"><div><span class="eyebrow">Development preview</span><h2 class="section-heading">Built step by step with our community</h2><p class="section-copy">Socio is being developed as an organization-managed membership hub. Clubs continue handling formal admission and dues directly; Socio manages member access and community communication.</p></div></div><a class="button button-quiet button-small" href="{{ url_for('register_organization') }}">Explore the organization portal →</a></section>
+{% endblock %}
